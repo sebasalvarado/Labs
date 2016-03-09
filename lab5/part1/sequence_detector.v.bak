@@ -36,11 +36,26 @@ module sequence_detector(SW, KEY, LEDR);
                    if(!w) Y_D <= A;
                    else Y_D <= C;
                end
-            C: Y_D <= (!w)?E:Y_D<=D;
-            D:Y_D <=(!w)?E:F;
-            E:Y_D <= (!w)? A: G;
-            F:Y_D <= (!w)? E: F;
-            G:Y_D <=(!w)? C:A;
+            C: begin
+		  if (!w) Y_D <= E;
+		  else Y_D <= D;
+	      end
+            D:begin 
+		if(!w)Y_D <= E;
+		else Y_D <= F;
+	      end 
+            E:begin
+		if (!w) Y_D<= A;
+		else Y_D <= G;
+	      end
+            F: begin
+		   if(!w) Y_D <=E;
+		   else Y_D<=F;
+		end
+            G: begin
+	 	   if (!w) Y_D <= A;
+		   else Y_D <=C;
+		end
             default: Y_D = A;
         endcase
     end // state_table

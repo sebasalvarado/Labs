@@ -39,18 +39,28 @@ module sequence_detector(SW, KEY, LEDR);
             C: begin
 		  if (!w) Y_D <= E;
 		  else Y_D <= D;
-		end
+	      end
             D:begin 
-		if(!w)?E:F;
-            E:Y_D <= (!w)? A: G;
-            F:Y_D <= (!w)? E: F;
-            G:Y_D <=(!w)? C:A;
+		if(!w)Y_D <= E;
+		else Y_D <= F;
+	      end 
+            E:begin
+		if (!w) Y_D<= A;
+		else Y_D <= G;
+	      end
+            F: begin
+		   if(!w) Y_D <=E;
+		   else Y_D<=F;
+		end
+            G: begin
+	 	   if (!w) Y_D <= A;
+		   else Y_D <=C;
+		end
             default: Y_D = A;
         endcase
     end // state_table
 
-    // State Registers
-    always @(posedge clock)
+    // State Registers    always @(posedge clock)
     begin: state_FFs
         if(resetn == 1'b0)
             y_Q <=  A; // Should set reset state to state A
