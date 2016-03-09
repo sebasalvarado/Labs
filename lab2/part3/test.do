@@ -1,0 +1,15 @@
+#set the working dir, where all complied Verilog goes
+vlib work
+
+#Complue all verilog modules in full4adder.v to working dir
+vlog alu.v
+
+#Load simulation using full4adder as top level module
+vsim alu
+
+#Log alll signals and add some sognals to waveform window.
+log {/*}S
+#add wave would add all items in top level module
+add wave {/*}
+
+#First Case 

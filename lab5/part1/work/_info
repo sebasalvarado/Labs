@@ -1,0 +1,29 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 d/h/u17/c6/00/c6alvara/LABS/lab5/part1
+vsequence_detector
+!s110 1457556741
+!i10b 1
+!s100 N:5ADfLfVkB2<aJOCAfgS3
+I2SSTK1aI1@9ZfM<gTCbTI0
+V`JN@9S9cnhjKRR_L]QIcM3
+R0
+w1457555061
+8sequence_detector.v
+Fsequence_detector.v
+L0 9
+OV;L;10.3d;59
+r1
+!s85 0
+31
+!s108 1457556741.570536
+!s107 sequence_detector.v|
+!s90 -reportprogress|300|sequence_detector.v|
+!i113 1

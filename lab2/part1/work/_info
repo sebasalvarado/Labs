@@ -1,0 +1,48 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 d/h/u17/c6/00/c6alvara/LABS/lab2/part1
+vmux
+Z1 !s110 1454549142
+!i10b 1
+!s100 C^Ff`^lgflKQ3kjzSUY1S3
+I3GbSP]P9lfY5VgI;ki_M23
+Z2 V`JN@9S9cnhjKRR_L]QIcM3
+R0
+Z3 w1454546110
+Z4 8mux7to1.v
+Z5 Fmux7to1.v
+L0 20
+Z6 OV;L;10.3d;59
+r1
+!s85 0
+31
+Z7 !s108 1454549142.377144
+Z8 !s107 mux7to1.v|
+Z9 !s90 -##implicit##push_minusfile_path##|/h/u17/c6/00/c6alvara/LABS/lab2/part1/vlog.opt|-##implicit##pop_minusfile_path##|-reportprogress|300|mux7to1.v|
+!i113 1
+vmux7to1
+R1
+!i10b 1
+!s100 zZO0Cl:zeT[_MVmeO4Waj0
+I8TTIzE@7cfGP@hE3d_4jd1
+R2
+R0
+R3
+R4
+R5
+L0 8
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1

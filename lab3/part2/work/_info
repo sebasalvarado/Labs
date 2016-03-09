@@ -1,0 +1,143 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 d/h/u17/c6/00/c6alvara/LABS/lab3/part2
+valulogical
+Z1 !s110 1455142812
+!i10b 1
+!s100 Q::dWh=@=@_CGDCZ7k35>1
+IQDdEaRkzic`I?Xh]IQ=iV0
+Z2 V`JN@9S9cnhjKRR_L]QIcM3
+R0
+Z3 w1455061949
+Z4 8bit8register.v
+Z5 Fbit8register.v
+L0 196
+Z6 OV;L;10.3d;59
+r1
+!s85 0
+31
+Z7 !s108 1455142812.286399
+Z8 !s107 bit8register.v|
+Z9 !s90 -reportprogress|300|bit8register.v|
+!i113 1
+vbit8register
+R1
+!i10b 1
+!s100 A1R=Y7ciAlKFzQd7Oe@8P3
+IYZ[AjE3dPd;_0RVjf=d=42
+R2
+R0
+R3
+R4
+R5
+L0 4
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+vdpositiveflipflop
+R1
+!i10b 1
+!s100 8a[4Y^PSLj_NR7_dk^[>c3
+IUU<CjCWVbVZz;30JX[[mV3
+R2
+R0
+R3
+R4
+R5
+L0 137
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+vfull4adder
+R1
+!i10b 1
+!s100 YS7DY1?gZi^ZGS_gW^<X[2
+Ih1YNK2>g]g1mzW6c9YC963
+R2
+R0
+R3
+R4
+R5
+L0 151
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+vfulladder
+R1
+!i10b 1
+!s100 hBTz?0VW?DU`]^3onJ=Jk0
+ISo@SRe0Vj^A=3jAJYol2d2
+R2
+R0
+R3
+R4
+R5
+L0 190
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+vhex_decoder
+R1
+!i10b 1
+!s100 E>k1ZLan>fDZgAN4`?HM;3
+IDn3dkjJK7ZD4^gW_HoOf80
+R2
+R0
+R3
+R4
+R5
+L0 51
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+vregister8bit
+R1
+!i10b 1
+!s100 R6jzHXEPHQ4KLCnzm0G7k1
+ITdzRzb9DJTQmC>Kk0g?n32
+R2
+R0
+R3
+R4
+R5
+L0 77
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1

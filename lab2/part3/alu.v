@@ -1,0 +1,356 @@
+`timescale 1ns / 1ns // `timescale time_unit/time_precision
+
+module alu(LEDR,SW,KEY,HEX0,HEX1,HEX2,HEX3,HEX4,HEX5);
+    input [9:0]SW;
+    input [2:0]KEY;
+    wire [0:7]con1;
+    wire [0:7]con2;
+    wire [0:7]con3;
+    wire [0:7]con4;
+    wire [0:7]con5;
+    wire [0:7]con6;
+    output [7:0]LEDR;
+    output [6:0]HEX0;
+    output [6:0]HEX1;
+    output [6:0]HEX2;
+    output [6:0]HEX3;
+    output [6:0]HEX4;
+    output [6:0]HEX5;
+    //Assign the HEX that display zero
+    assign HEX1[5:0] = 0;
+    assign HEX3[5:0] = 0;
+    // call the function selector to implement the appropriate function
+    //First CASE
+    full4adder a1(
+		  .OUT(con1[0:7]),
+		  .A(SW[7:4]),
+		  .B(SW[3:0])
+		  );
+    //Second CASE
+    simpleadder a2(
+		  .OUT(con2[0:7]),
+		  .A(SW[7:4]),
+		  .B(SW[3:0])
+		);
+    //Third CASE
+    or_xor_out a3(
+		  .OUT(con3[0:7]),
+		  .A(SW[7:4]),
+		  .B(SW[3:0])
+		  );
+	//Fourth Case
+	unary_or a4(
+		  .OUT(con4[0:7]),
+		  .A(SW[7:4]),
+		  .B(SW[3:0])
+		  );
+    //FIFTH CASE
+    	unary_and a5(
+		  .OUT(con5[0:7]),
+		  .A(SW[7:4]),
+		  .B(SW[3:0])
+	 );
+    //SIXTH CASE
+	union_bits a6(
+		  .OUT(con6[0:7]),
+		  .A(SW[7:4]),
+		  .B(SW[3:0])
+	 );
+
+	//Use the multiplexer to decide which one to implement
+	mux7to1 b1(
+	.OUT(LEDR[7:0]),
+	.KEY(KEY[2:0]),
+	.A(con1),
+	.B(con2),
+	.C(con3),
+	.D(con4),
+	.E(con5),
+	.F(con6)
+	);
+
+    //NOW IMPLEMENT THE OUTPUT IN HEX
+
+	//DISPLAY HEX0 AND HEX2
+	hexdecod h1(
+	.HEX0(HEX0[6:0]),
+	.SW(SW[3:0])
+	);
+	hexdecod h2(
+	.HEX0(HEX2[6:0]),
+	.SW(SW[7:4])
+	);
+	
+	//DISPLAY THE REQUIRED OPERATION
+	
+	hexdecod h3(
+	.HEX0(HEX4[6:0]),
+	.SW(LEDR[3:0])
+	);
+	hexdecod h4(
+	.HEX0(HEX5[6:0]),
+	.SW(LEDR[7:4])
+	);
+endmodule
+
+module full4adder(OUT,A,B);
+
+    	 input [3:0]A;
+	 input [3:0]B;
+	 output [7:0]OUT;
+	 wire connection1, connection2, connection3;
+
+	 fulladder a1(
+		.a(A[0]),
+		.b(B[0]),
+		.c0(0),
+		.s(OUT[0]),
+		.c1(connection1)
+	 );
+
+	 fulladder a2(
+		.a(A[1]),
+		.b(B[1]),
+		.c0(connection1),
+		.s(OUT[1]),
+		.c1(connection2)
+	 );
+
+	 fulladder a3(
+		.a(A[2]),
+		.b(A[2]),
+		.c0(connection2),
+		.s(OUT[2]),
+		.c1(connection3)
+	 );
+
+	 fulladder a4(
+		.a(A[3]),
+		.b(B[3]),
+		.c0(connection3),
+		.s(OUT[3]),
+		.c1(OUT[4])
+	 );
+	 assign OUT[7:5] = 0;
+endmodule
+
+module fulladder(a,b,c0,s,c1);
+    input a,b,c0;
+    output s,c1;
+    assign s = ~b&~a&c0 | ~b&a&~c0 | b&~a&~c0 | b&a&c0;
+    assign c1 =b&c0 | a&c0 | a&b;
+endmodule
+
+module or_xor_out(OUT,A,B);
+	 input [3:0]A;
+	 input [3:0]B;
+	 output[7:0]OUT;
+	 assign OUT[3:0] = A|B;
+	 assign OUT[7:4] = (A&~B) | (B&~A);
+endmodule
+
+module unary_and(OUT,A,B);
+	 input [3:0]A;
+	 input [3:0]B;
+	 output [7:0]OUT;
+	 assign OUT = {A[3:0],B[3:0]};
+	 assign OUT[0] = (&A) & (&B);
+	 assign OUT[7:1] = 0;
+endmodule
+
+module unary_or(OUT,A,B);
+	 input [3:0]A;
+	 input [3:0]B;
+	 output [7:0]OUT;
+	 assign OUT = {A[3:0],B[3:0]};
+	 assign OUT[0] = (|A) | (|B);
+	 assign OUT[7:1] = 0;
+
+endmodule
+
+module union_bits(OUT,A,B);
+	 input [3:0]A;
+	 input [3:0]B;
+	 output [7:0]OUT;
+	 assign OUT[7:4] = A[3:0];
+	 assign OUT[3:0] = B[3:0];
+endmodule
+
+module mux7to1(OUT,KEY,A,B,C,D,E,F);
+
+    input [7:0] A;
+	input [7:0]B;
+	input[7:0]C;
+	input [7:0]D;
+	input [7:0]E;
+	input [7:0]F;
+    input [2:0]KEY;
+    output [7:0] OUT;
+    mux u1(
+	.A(A[7:0]),
+	.B(B[7:0]),
+	.C(C[7:0]),
+	.D(D[7:0]),
+	.E(E[7:0]),
+	.F(F[7:0]),
+	.KEY(KEY[2:0]),
+	.Out(OUT[7:0])
+	);
+
+endmodule
+
+module mux(A,B,C,D,E,F,KEY,Out);
+    input [7:0] A;
+	input [7:0]B;
+	input[7:0]C;
+	input [7:0]D;
+	input [7:0]E;
+	input [7:0]F;
+ input [2:0]KEY;
+ output [7:0]Out;
+ reg [7:0]Out;
+ always@(*)
+	begin
+	  case(KEY[2:0])
+	 	3'b000: Out = A;
+        	3'b001: Out = B;
+        	3'b010: Out = C;
+        	3'b011: Out = D;
+        	3'b100: Out = E;
+        	3'b101: Out = F;
+		default: Out=0;
+        endcase
+	end
+endmodule
+
+module hexdecod(HEX0, SW);
+	input [3:0] SW;
+	output [6:0] HEX0;
+	
+
+	hexprocesser h0(
+		.a(SW[0]),  //connect port SW[0] to a
+		.b(SW[1]),  //connect port SW[1] to b
+		.c(SW[2]),  //connect port SW[2] to c
+		.d(SW[3]),  //connect port SW[3] to d
+		.m(HEX0[0])  //connect the output to the 7 segment display
+		);
+
+	hexprocesser1 h1(
+		.a(SW[0]),  //connect port SW[0] to a
+		.b(SW[1]),  //connect port SW[1] to b
+		.c(SW[2]),  //connect port SW[2] to c
+		.d(SW[3]),  //connect port SW[3] to d
+		.m(HEX0[1])  //connect the output to the 7 segment display
+		);	
+
+	hexprocesser2 h2(
+		.a(SW[0]),  //connect port SW[0] to a
+		.b(SW[1]),  //connect port SW[1] to b
+		.c(SW[2]),  //connect port SW[2] to c
+		.d(SW[3]),  //connect port SW[3] to d
+		.m(HEX0[2])  //connect the output to the 7 segment display
+		);
+
+	hexprocesser3 h3(
+		.a(SW[0]),  //connect port SW[0] to a
+		.b(SW[1]),  //connect port SW[1] to b
+		.c(SW[2]),  //connect port SW[2] to c
+		.d(SW[3]),  //connect port SW[3] to d
+		.m(HEX0[3])  //connect the output to the 7 segment display
+		);
+
+	hexprocesser4 h4(
+		.a(SW[0]),  //connect port SW[0] to a
+		.b(SW[1]),  //connect port SW[1] to b
+		.c(SW[2]),  //connect port SW[2] to c
+		.d(SW[3]),  //connect port SW[3] to d
+		.m(HEX0[4])  //connect the output to the 7 segment display
+		);
+
+	hexprocesser5 h5(
+		.a(SW[0]),  //connect port SW[0] to a
+		.b(SW[1]),  //connect port SW[1] to b
+		.c(SW[2]),  //connect port SW[2] to c
+		.d(SW[3]),  //connect port SW[3] to d
+		.m(HEX0[5])  //connect the output to the 7 segment display
+		);
+
+	hexprocesser6 h6(
+		.a(SW[0]),  //connect port SW[0] to a
+		.b(SW[1]),  //connect port SW[1] to b
+		.c(SW[2]),  //connect port SW[2] to c
+		.d(SW[3]),  //connect port SW[3] to d
+		.m(HEX0[6])  //connect the output to the 7 segment display
+		);
+endmodule
+
+module hexprocesser(a, b, c, d, m);
+	input a; //selected when the a signal is needed
+	input b; //selected when the b signal is needed
+	input c; //selected when the c signal is needed
+	input d; //selected when the d signal is needed
+	output m; //output of the segment
+	assign m = ~a & ~b & ~c & d | ~a & b & ~c & ~d | a & ~b & c & d | a & b & ~c & d;
+
+endmodule
+
+module hexprocesser1(a, b, c, d, m);
+	input a; //selected when the a signal is needed
+	input b; //selected when the b signal is needed
+	input c; //selected when the c signal is needed
+	input d; //selected when the d signal is needed
+	output m; //output of the segment
+	assign m = b & c & ~d | a & c & d | a & b & ~d | ~a & b & ~c & d;
+
+endmodule
+
+module hexprocesser2(a, b, c, d, m);
+	input a; //selected when the a signal is needed
+	input b; //selected when the b signal is needed
+	input c; //selected when the c signal is needed
+	input d; //selected when the d signal is needed
+	output m; //output of the segment
+	assign m = a & b & ~d | a & b & c | ~a & ~b & c & ~d;
+
+endmodule
+
+module hexprocesser3(a, b, c, d, m);
+	input a; //selected when the a signal is needed
+	input b; //selected when the b signal is needed
+	input c; //selected when the c signal is needed
+	input d; //selected when the d signal is needed
+	output m; //output of the segment
+	assign m = ~b & ~c & d | b & c & d | ~a & b & ~c & ~d | a & ~b & c & ~d;
+
+endmodule
+
+module hexprocesser4(a, b, c, d, m);
+	input a; //selected when the a signal is needed
+	input b; //selected when the b signal is needed
+	input c; //selected when the c signal is needed
+	input d; //selected when the d signal is needed
+	output m; //output of the segment
+	assign m = ~a & d | ~b & ~c & d | ~a & b & ~c;
+
+endmodule
+
+module hexprocesser5(a, b, c, d, m);
+	input a; //selected when the a signal is needed
+	input b; //selected when the b signal is needed
+	input c; //selected when the c signal is needed
+	input d; //selected when the d signal is needed
+	output m; //output of the segment
+	assign m = ~a & ~b & d | ~a & ~b & c | ~a & c & d | a & b & ~c & d;
+
+endmodule
+
+module hexprocesser6(a, b, c, d, m);
+	input a; //selected when the a signal is needed
+	input b; //selected when the b signal is needed
+	input c; //selected when the c signal is needed
+	input d; //selected when the d signal is needed
+	output m; //output of the segment
+	assign m = ~a & ~b & ~c | ~a & b & c & d | a & b & ~c & ~d;
+
+endmodule

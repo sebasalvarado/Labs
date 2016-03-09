@@ -1,0 +1,25 @@
+#set the working dir, where all complied Verilog goes
+ vlib work
+# 
+#Complue all verilog modules in full4adder.v to working dir
+ vlog shifter.v
+# 
+#Load simulation using full4adder as top level module
+ vsim shifter
+#Log alll signals and add some sognals to waveform window.
+ log {/*}
+#add wave would add all items in top level module
+ add wave {/*}
+# First Case: Load it with a 0000111 and make the clock oscillate every 10 ns and reset just at the 
+#beginning
+force {SW[7:4]} 0 0, 1 10 -repeat 20;
+force {SW[3]} 1;
+force {SW[2]} 1;
+force {SW[1]} 1;
+force {SW[0]} 1;
+force {KEY[0]} 0 0, 1 5 -repeat 10;
+force {SW[9]} 0 0, 1 10 -repeat 20;
+force {KEY[2]} 1;
+force {KEY[1]} 0 0, 1 10 -repeat 20;
+force {KEY[3]} 0;
+run 100ns

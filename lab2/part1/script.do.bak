@@ -1,0 +1,56 @@
+#set working directoy
+vlib work
+#compile the verilog modules
+vlog mux7to1.v
+#load simulation using mux 
+vsim mux7to1
+#log all signals add some waveform signals
+log {/*}
+#add wave {/*} adds the items on top level
+add wave {/*}
+
+#Test Case 1: Choosing a when all switches are 0
+force {SW[6:1]} 0 
+force {SW[0]} 1
+force {SW[9:7]} 0 
+run 10ns
+
+# Test Cas 2: Choosin c when s1=s3=0 s2=1
+
+force {SW[2]} 1
+force {SW[1:0]} 0 
+force {SW[9]} 0
+force {SW[7]} 0
+force {SW[8]} 1
+force {SW[6:3]} 0
+run 10ns
+
+#Test Case 3: CHoosing g on first combination of s2=s3=1 an s1=0
+
+force {SW[5:0]} 0
+force {SW[6]} 1
+force {SW[7]} 1
+force {SW[8]} 1
+force {SW[9]} 0 
+run 10ns
+
+#Test Case 4: Choosing d when s1=s2=1 and s3=0 
+# This tests when in the last switch the value of y must be chosen
+force {SW[2:0]} 0
+force {SW[3]} 1
+force {SW[6:4]} 0
+force {SW[9]} 1
+force {SW[8]} 1
+force {SW[7]} 0 
+run 10ns
+
+#Test Case 5: CHoosing b when s1=1 and s2=s3=0
+#THis tests our 
+ force {SW[0]} 1
+force {SW[1]} 1
+force {SW[6:2]} 0
+force {SW[9]} 1
+force {SW[8]} 0 
+force {SW[7]} 0
+run 10ns
+

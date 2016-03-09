@@ -1,0 +1,86 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 d/h/u17/c6/00/c6alvara/LABS/lab3/part3
+vdpositiveflipflop
+Z1 !s110 1455143270
+!i10b 1
+!s100 PTMJD44Nk_8`JTIY0D_Z^3
+IF00m46oBk_;<n4m9^jW:T1
+Z2 V`JN@9S9cnhjKRR_L]QIcM3
+R0
+Z3 w1455142423
+Z4 8shifter.v
+Z5 Fshifter.v
+L0 138
+Z6 OV;L;10.3d;59
+r1
+!s85 0
+31
+Z7 !s108 1455143270.484528
+Z8 !s107 shifter.v|
+Z9 !s90 -reportprogress|300|shifter.v|
+!i113 1
+vmux2to1
+R1
+!i10b 1
+!s100 J?<NKXbS9=3=XTZT:OGiX1
+IBf5GRJ5I2SRnRNd?B^cTP1
+R2
+R0
+R3
+R4
+R5
+L0 153
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+vshiftbit
+R1
+!i10b 1
+!s100 05]87]JJ=]3I39`cUn>Q=0
+IHTK9TK>L4_?7l1Rdol<eX0
+R2
+R0
+R3
+R4
+R5
+L0 110
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+vshifter
+R1
+!i10b 1
+!s100 Y9k:>l>MjL[E[mYEOM?<e3
+IV@1D>zgHFWU49z_EFjf;j2
+R2
+R0
+R3
+R4
+R5
+L0 3
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1

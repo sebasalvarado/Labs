@@ -1,0 +1,67 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 d/h/u17/c6/00/c6alvara/LABS/lab2/part2
+vfull4adder
+Z1 !s110 1454551500
+!i10b 1
+!s100 :RLb:ZR<jJ5XfP98OF_bQ0
+I52XZ]KA50C2:RL<[eBRLY3
+Z2 V`JN@9S9cnhjKRR_L]QIcM3
+R0
+Z3 w1454550960
+Z4 8full4adder.v
+Z5 Ffull4adder.v
+L0 9
+Z6 OV;L;10.3d;59
+r1
+!s85 0
+31
+Z7 !s108 1454551500.520716
+Z8 !s107 full4adder.v|
+Z9 !s90 -reportprogress|300|full4adder.v|
+!i113 1
+vfull4adder_f
+!s110 1454550841
+!i10b 1
+!s100 :Z_T@:Tm?Zg_1`c:Zh8ZG3
+Ii0EFDK2oC[@gYB@n4Jak72
+R2
+R0
+w1454550840
+R4
+R5
+L0 9
+R6
+r1
+!s85 0
+31
+!s108 1454550841.776029
+R8
+R9
+!i113 1
+vfulladder
+R1
+!i10b 1
+!s100 KVd1KZhV>Y6=1Z;4W2V663
+IgTnAVP05XR?_7o>@>8<MG2
+R2
+R0
+R3
+R4
+R5
+L0 48
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
