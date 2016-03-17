@@ -1,5 +1,3 @@
-// Part 2 skeleton
-
 //Possible Errors: Line 198 maybe go is 1 when we press it try switching sides of cases
 module part2
 	(
@@ -38,11 +36,12 @@ module part2
 	wire [7:0] x;
 	wire [6:0] y;
 	wire writeEn;
-	wire go, resetn;
+	wire go, resetn, load_enable;
 	//Assign corresponding keys into the wires.
 	assign resetn = KEY[0];
 	assign colour = SW[9:7];
 	assign  go = ~KEY[1];
+	assign load_enable = ~KEY[3];
 	assign INPUT = SW[6:0];
 
 	// ALl the wires that we need to connect control and datapath
@@ -96,6 +95,7 @@ module part2
 		.clk(CLOCK_50),
 		.resetn(resetn),
 		.go(go),
+		.load_enable(load_enable),
 
 		// Outputs that are being put into the datapath and the VGA
 		.load_x(load_x),
@@ -121,17 +121,21 @@ module datapah(input clk,
 	reg [7:0]x_reg;
 	reg [6:0] y_reg;
 	reg [3:0] counter;
-	reg [14:0] alu_output;
+	// Define the two outputs of our ALU unit
+	reg [7:0] x_alu;
+	reg [6:0] y_alu;
 
 	//Input Logic for Load registers
 	always@(posedge clk)
 	begin: InputLogic
 		if(!resetn) begin
-			x_reg <= 8'b0;
-			y_reg <= 7'b0;
-			alu_output <= 15'b0;
+			x <= 8'b0;
+			y <= 7'b0;
+			x_reg <=8'b0;
+			y_reg <=7'b0;
+			x_alu <= 8'b0;
+			y_alu <= 7'b0;
 			counter <= 4'b0;
-			end
 		else begin
 		     if(load_x)
 		    // Set x depending on the signal of ldu_alu_out, first 8 bits of the alu_out
@@ -151,40 +155,38 @@ module datapah(input clk,
 		else
 		   begin
 		   if(load_r)
-			x <=  alu_output[14:7];	// Set the output x to the first 8 bits
-			y <=  alu_output[6:0]; // Set the output y to the first 7 bits
+			x <=  x_alu;	// Set the output x to the first 8 bits
+			y <=  y_alu; // Set the output y to the first 7 bits
 	           end
 	end
 
 	//LOgic for the Counter register
 	always@(posedge clk)
 	begin:COUNTERLOGIC
-		if(counter == 4'd15) begin // the reset case is already being handled before
-			counter <= 4'b00; // When we reach 15 we reset it again and keep counting
-		end
+		if(counter == 4'd15)  // the reset case is already being handled before
+		    counter <= 4'b00; // When we reach 15 we reset it again and keep counting
 		else begin
-		    if(load_c == 1'b1)begin
-		   counter <= counter + 1'b1; // add one on every clock edge
-		   end
+		    if(load_c == 1'b1)
+		    counter <= counter + 1'b1; // add one on every clock edge
+		end
 	end
 
 	// The ALU Implementation
 	always@(*)
-	begin: ALU
+	begin:ALU
 		// We add the two most significant bits to Y and the least to X
-		alu_output <= {x_reg + counter[3:2], y_reg + counter[1:0]};
+		x_alu = x_reg + {6'b0,counter[1:0]};
+		y_alu = y_reg + {5'b0,counter[3:2]};
 	end
 endmodule
 
 module control(input clk,
 		input resetn,
 		input go,
-		output load_x,
-		output load_y,
-		output load_r,
-		output load_c,
-		output load_alu_out,
-		output plot);
+		input load_enable,
+		output reg load_x, load_y, load_r, load_c,
+		output reg load_alu_out,
+		output reg plot);
 	// Declare the State table to refer to it later
 	localparam LOAD_X = 3'd0,
 		   LOAD_X_WAIT = 3'd1,
@@ -198,19 +200,19 @@ module control(input clk,
 	always@(*)
 	begin: state_table
 	     case(current_state)
-		LOAD_X:	 next_state = go? LOAD_X_WAIT:LOAD_X;	//loop in its state until go signal goes high again
-		LOAD_X_WAIT:  next_state = go? LOAD_Y: LOAD_X_WAIT; //loop in its state until go signal goes high again
-		LOAD_Y: next_state = go? LOAD_Y_WAIT: LOAD_Y; //loop in its state until go signal goes high again
+		LOAD_X:	 next_state = load_enable? LOAD_X_WAIT:LOAD_X;	//loop in its state until go signal goes high again
+		LOAD_X_WAIT:  next_state = load_enable? LOAD_X_WAIT: LOAD_Y; //loop in its state until go signal goes high again
+		LOAD_Y: next_state = (load_enable)? LOAD_Y_WAIT: LOAD_Y; //loop in its state until go signal goes high again
 		LOAD_Y_WAIT: next_state = go? DISPLAY_RESULT: LOAD_Y_WAIT; //loop in its state until go signal goes high again
-		DISPLAY_RESULT: next_state = go? LOAD_X:DISPLAY_RESULT; //loop in its state until go signal goes high again
+		DISPLAY_RESULT: next_state = go? DISPLAY_RESULT:LOAD_X; //loop in its state until go signal goes high again
 	     default: next_state = LOAD_X;
-	endcase
+	     endcase
 	end // THis was the state table
 
 
 	//Output logic, everything that the data path will receive as input goes here.
 	always@(*)
-	begin: OutLogic
+	begin:OutLogic
 	// Set all of them to zero
 	   load_x = 1'b0;
 	   load_y = 1'b0;
@@ -220,17 +222,20 @@ module control(input clk,
 	   case(current_state)
 		LOAD_X: begin
 		  load_x = 1'b1; // send signal to allow X to be loaded
+		  load_alu_out = 1'b1; // Select the mux to choose the data from data_in
 		  end
 		LOAD_Y: begin
 		  load_y = 1'b1; // send signal to allow Y to be loaded
+		  load_alu_out = 1'b1; // Select the mux to choose the data from data_in
 		   end
 		DISPLAY_RESULT: begin
 		  load_x = 1'b1; // When we will perform the computation
 		  load_y = 1'b1; // All of the registers must be open and ready to be loaded.
 		  load_r = 1'b1;
 		  load_c = 1'b1;
-		  load_alu_out = 1'b1;
-		   end
+		  load_alu_out = 1'b0;
+		  plot = 1'b1;
+		  end
 	   endcase
 	end
 
