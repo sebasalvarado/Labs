@@ -1,0 +1,67 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 d/h/u3/c6/05/c6alvare/Labs/lab6/Labs/lab6/part1
+vhex_decoder
+Z1 !s110 1458246841
+!i10b 1
+!s100 g@MA;VTB^G24YjMjI_^TK3
+IibTM_zZ`o6]FHPP@A639L1
+Z2 V`JN@9S9cnhjKRR_L]QIcM3
+R0
+Z3 w1458246827
+Z4 8part1.v
+Z5 Fpart1.v
+L0 129
+Z6 OV;L;10.3d;59
+r1
+!s85 0
+31
+Z7 !s108 1458246841.061917
+Z8 !s107 part1.v|
+Z9 !s90 -reportprogress|300|part1.v|
+!i113 1
+vpart1
+R1
+!i10b 1
+!s100 Z1Cn0e>;[8;VZT7>cJknQ1
+Ife_;hG?Zk296]`O[@bD>T1
+R2
+R0
+R3
+R4
+R5
+L0 5
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+vram32x4
+R1
+!i10b 1
+!s100 4BGNK?9gZI7ZARV^iWh3j1
+IV>RKM[WUg=fzMV8P>HI9n2
+R2
+R0
+R3
+R4
+R5
+L0 61
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
