@@ -1,6 +1,4 @@
-//Possible Errors: Line 198 maybe go is 1 when we press it try switching sides of cases
-module part2
-	(
+module part3(
 		CLOCK_50,						//	On Board 50 MHz
 		// Your inputs and outputs here
         KEY,
@@ -37,44 +35,59 @@ module part2
 	wire [6:0] y;
 	wire writeEn;
 	wire go, resetn, load_enable;
+
+    // We will need our own FSM and datapath then call draw_square to do so
+
+endmodule
+
+module datapath(input x_direction,
+		input y_direction,
+		input x_enable,
+		input y_enable,
+		input delay_enable,
+		input resetn,
+		input clock,
+		output [7:0]x,
+		output [6:0]y);
+
+	// Declare the registers that we are going to use in this module
+	reg
+
+endmodule
+
+module control()
+endmodule
+
+
+
+module draw_square(CLOCK_50, SW, KEY, X,Y, COLOR, PLOT);
+	//Define the inputs of the module
+	input			CLOCK_50;				//	50 MHz
+	input   [9:0]   SW;
+	input   [3:0]   KEY;
+	// Define the ouputs of the module that will be inputs of VGA
+	output [2:0] COLOR;
+	output [7:0] X;
+	output [6:0] Y;
+	output PLOT;
+
+
+	// Create the colour, x, y and writeEn wires that are inputs to the controller.
+	wire writeEn;
+	wire [6:0]INPUT;
+	wire go, resetn , load_enable;
 	//Assign corresponding keys into the wires.
 	assign resetn = KEY[0];
-	assign colour = SW[9:7];
+	assign COLOR = SW[9:7];
 	assign  go = ~KEY[1];
-	assign load_enable = ~KEY[3];
 	assign INPUT = SW[6:0];
+	assign load_enable = ~KEY[3];
 
 	// ALl the wires that we need to connect control and datapath
 	wire load_x, load_y, load_r, load_c, ld_alu_out;
-	// Create an Instance of a VGA controller - there can be only one!
-	// Define the number of colours as well as the initial background
-	// image file (.MIF) for the controller.
-	vga_adapter VGA(
-			.resetn(resetn),
-			.clock(CLOCK_50),
-			.colour(colour),
-			.x(x),
-			.y(y),
-			.plot(writeEn),
-			/* Signals for the DAC to drive the monitor. */
-			.VGA_R(VGA_R),
-			.VGA_G(VGA_G),
-			.VGA_B(VGA_B),
-			.VGA_HS(VGA_HS),
-			.VGA_VS(VGA_VS),
-			.VGA_BLANK(VGA_BLANK),
-			.VGA_SYNC(VGA_SYNC),
-			.VGA_CLK(VGA_CLK));
-		defparam VGA.RESOLUTION = "160x120";
-		defparam VGA.MONOCHROME = "FALSE";
-		defparam VGA.BITS_PER_COLOUR_CHANNEL = 1;
-		defparam VGA.BACKGROUND_IMAGE = "black.mif";
 
-	// Put your code here. Your code should produce signals x,y,colour and writeEn/plot
-	// for the VGA controller, in addition to any other functionality your design may require.
-
-    // Instansiate datapath
-	datapath d0(
+	// Instansiate datapath
+	datapath_draw d0(
 		.clk(CLOCK_50),
 		.resetn(resetn),
 
@@ -86,12 +99,12 @@ module part2
 
 		.data_in(INPUT),
 
-		.x(x),
-		.y(y)
+		.x(X),
+		.y(Y)
 		);
 
     // Instansiate FSM control
-     control c0(
+     control_draw c0(
 		.clk(CLOCK_50),
 		.resetn(resetn),
 		.go(go),
@@ -103,19 +116,19 @@ module part2
 		.load_r(load_r),
 		.load_c(load_c),
 		.load_alu_out(ld_alu_out),
-		.plot(writeEn)
+		.plot(PLOT)
 		);
-
 endmodule
 
-module datapah(input clk,
+
+module datapath_draw(input clk,
 	 	input resetn,
 		input load_x,
 		input load_y,
 		input load_r,
 		input load_c,
 		input ld_alu_out,
-		input [6:0] data_in,
+		input [6:0]data_in,
 		output reg [7:0]x, output reg [6:0]y);
 	// Declare the registers that we will have
 	reg [7:0]x_reg;
@@ -136,6 +149,7 @@ module datapah(input clk,
 			x_alu <= 8'b0;
 			y_alu <= 7'b0;
 			counter <= 4'b0;
+		end
 		else begin
 		     if(load_x)
 		    // Set x depending on the signal of ldu_alu_out, first 8 bits of the alu_out
@@ -144,7 +158,6 @@ module datapah(input clk,
 			y_reg <= ld_alu_out? data_in: alu_output[6:0];
 		end
 	end
-
 	//Output Result Register
 	always@(posedge clk)
 	begin:Output
@@ -170,7 +183,6 @@ module datapah(input clk,
 		    counter <= counter + 1'b1; // add one on every clock edge
 		end
 	end
-
 	// The ALU Implementation
 	always@(*)
 	begin:ALU
@@ -180,7 +192,7 @@ module datapah(input clk,
 	end
 endmodule
 
-module control(input clk,
+module control_draw(input clk,
 		input resetn,
 		input go,
 		input load_enable,
@@ -208,8 +220,6 @@ module control(input clk,
 	     default: next_state = LOAD_X;
 	     endcase
 	end // THis was the state table
-
-
 	//Output logic, everything that the data path will receive as input goes here.
 	always@(*)
 	begin:OutLogic
