@@ -111,6 +111,7 @@ module datapath(clk,
 	// Declaring the inputs and outputs of the module
 	input clk;
 	input resetn;
+	input [1:0]finish;
 	input [4:0]offset_x;
 	input [3:0]offset_y;
 	output reg [7:0] x;
@@ -161,16 +162,27 @@ module datapath(clk,
 	end
 endmodule
 
-module control(input clk,
-		input resetn,
-		input go,
-		input [8:0]x,
-		input [7:0]y,
-		output [1:0]finish,
-		output [4:0]offset_x,
-		output [3:0]offset_y,
-		output reg [3:0]color,
-		output reg plot);
+module control(clk,
+		resetn,
+		go,
+		x,
+		y,
+		finish,
+		offset_x,
+		offset_y,
+		colour,
+		plot);
+		
+		input resetn;
+		input clk;
+		input go;
+		input [8:0] x;
+		input [7:0] y;
+		output reg [1:0] finish;
+		output reg [4:0] offset_x;
+		output reg [3:0] offset_y;
+		output reg [2:0] colour;
+		output reg plot;
 	// Declare the State table to refer to it later
 	localparam START_STATE = 3'd0,
 		   PAINT_BLOCK = 3'd1,
@@ -185,81 +197,76 @@ module control(input clk,
 	begin: state_table
 	   case(current_state)
 		START_STATE:next_state = go? PAINT_BLOCK:START_STATE;	//loop in its state until go signal goes high again
-		PAINT_BLOCK:begin // After painting blue you have to check if you will go out of bounds
-			if(x == 9'd304 && y == 8'd240) // meaning if you are one block before last
+		PAINT_BLOCK:
+			begin // After painting blue you have to check if you will go out of bounds
+		           if(x == 9'd304 && y == 8'd240) // meaning if you are one block before last
 				next_state = PAINT_FINAL;
-			else if(x == 9'd304) // Paint the end of a line
+		       	   else if(x == 9'd304) // Paint the end of a line
 				next_state = PAINT_LAST;
-			else begin //keep painting the colour will be given by the register
-			    next_state = PAINT_BLOCK;
+		       	   else  //keep painting the colour will be given by the register
+		                next_state = PAINT_BLOCK;
 			end
-		PAINT_LAST:next_state = PAINT_FIRST; // At the end of the line print the next line block
+		PAINT_LAST:  next_state = PAINT_FIRST; // At the end of the line print the next line block
 		PAINT_FIRST: next_state = PAINT_BLOCK; //loop in its state until go signal goes high again
 		PAINT_FINAL: next_state = PAINT_FINAL; //loop in the end state until hardware is reset
-	   default: next_state = START_STATE;
-	   endcase
-	end // THis was the state table
-
-	//Selecting the colour that we will need
-	always@(posedge clock)
-	begin:ColourReg
-	case(current_state)
-		START_STATE:colour <= 3'b001;
-		PAINT_BLOCK:begin
-			if(colour == 3'b001) //If it was blue, paint green
-				colour <= 3'b010;
-			else if(colour == 3'b001) //If it was green paint black
-				colour <= 3'b111;
-			else if(colour == 3'b111) //If it was black paint blue
-				colour <= 3'b001
-
-			end
-		PAINT_LAST: colour <= 3'b010; //The last of each line will always be green
-		PAINT_FIRST: colour <=3'b001; // The first of each line wil always be blue
-		PAINT_FINAL: colour <= 3'b001; // The last one will be blue
-	endcase
+		endcase
 	end
-
+	//Selecting the colour that we will need
+	always@(posedge clk)
+	begin:ColourReg
+				case(current_state)
+					START_STATE:colour <= 3'b001;
+					PAINT_BLOCK: colour <= 3'b001;
+					//	if(colour == 3'b001)
+					//		begin //If it was blue, paint green
+					//		colour <= 3'b010;
+					//		end
+					//	else if(colour == 3'b001)
+					//		begin	//If it was green paint black
+					//		colour <= 3'b111;
+					//		end
+					//	else if(colour == 3'b111) //If it was black paint blue
+					//		begin
+					//		colour <= 3'b001;
+					//		end
+					PAINT_LAST: colour <= 3'b010; //The last of each line will always be green
+					PAINT_FIRST: colour <=3'b001; // The first of each line wil always be blue
+					PAINT_FINAL: colour <= 3'b001; // The last one will be blue
+				endcase
+	end
 	// Logic for the counter to be sent to the ALU
-	reg [8:0]counter;
-	assign offset_x = [4:0]counter;
-	assign offset_y = [8:5]counter;
-
-	always@(posedge clock)
-	begin:Counter Logic
-		if (!reset)
-		   counter <= 6'd0;
-		else if(counter == 6'd196)
-		   counter <= 6'd0;
+	reg [8:0] counter;
+	always@(posedge clk)
+	begin:CounterLogic
+		if (!resetn)
+		   counter <= 9'd0;
+		else if(counter == 9'd196)
+		   counter <= 9'd0;
 		else
 		   counter <= counter + 1; //Count up every time
-
-
-
+	end
+	
+	assign x_offset = counter[4:0];
+	assign y_offset = counter[8:5];
 	// Finish signal Logic goes here
 	always@(*)
-	begin:FinishSignal
-		if(!reset || counter != 6'd196)
-			finish = 2'b00; //Send a 00 meaning not finished
-		else if(counter == 6'd196)
-			finish = 2'b01;
+	begin:Finish
+		if(!resetn || counter != 9'd196)
+			finish <= 2'b00; //Send a 00 meaning not finished
+		else if(counter == 9'd196)
+			finish <= 2'b01;
 		else if(x == 9'd320)// If we are on the last pixel, switch to next line
-			finish = 2'b10;
+			finish <= 2'b10;
+	end
 	//Output logic, everything that the data path will receive as input goes here.
 	always@(*)
 	begin:OutLogic
 	// Set all of them to zero
 	   plot = 1'b0;
 	   case(current_state)
-		START_STATE: begin
-			plot = 1'b1;
-			end
-		PAINT_BLOCK: begin
-		   plot = 1'b1;
-		   end
-		PAINT_LAST: begin
-			plot = 1'b1;
-		  end
+		START_STATE: plot = 1'b1;
+		PAINT_BLOCK: plot = 1'b1;
+		PAINT_LAST: plot = 1'b1;
 		PAINT_FIRST: plot = 1'b1;
 		PAINT_FINAL: plot = 1'b1;
 	   endcase
@@ -275,13 +282,13 @@ module control(input clk,
 	end // THis is the state FFs that we will use
 
 	//Register for our Color
-	always@(posedge clk)
-	begin ColourRegister
-		if(!resetn)
-			colour = 3'b001; //On reset set solor to blue
-		else if(colour == 3'b001)
-			colour = 3'b010; //Become green if you were blue
-		else if(colour == 3'b010) //Become black if you weere green
-			colour = 3'b000;
-	end
+//	always@(*)
+//	begin: ColourRegister
+//		if(!resetn)
+//			colour = 3'b001; //On reset set solor to blue
+//		else if(colour == 3'b001)
+//			colour = 3'b010; //Become green if you were blue
+//		else if(colour == 3'b010) //Become black if you weere green
+//			colour = 3'b000;
+//	end
 endmodule
