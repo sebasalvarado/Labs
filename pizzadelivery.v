@@ -1,3 +1,4 @@
+
 //Possible Errors: Line 198 maybe go is 1 when we press it try switching sides of cases
 module pizzadelivery
 	(
@@ -75,15 +76,21 @@ module pizzadelivery
 	// for the VGA controller, in addition to any other functionality your design may require.
 endmodule
 
-module control_move(clk, resetn,done, direction_in, delay_signal,colour_signal,frames,direction,go);
+module control_move(clk, 
+		resetn,
+		done,go_in, direction_in,curr_x,curr_y, delay_signal,
+		colour_signal,direction,display_enable, go,ld_x,ld_y);
  input clk, resetn, delay_signal;//Delay signal is high every time that we have counted 1/60th of a second
+ input [1:0] direction_in; // Direction given from the user
+ input [7:0] curr_x;
+ input [6:0] curr_y;
+ input go_in; //go signal given by the user
  input done; //The draw_box module indictes when it has finished painting
  input [1:0] direction_in; //Has the direction given by the user
 
- output reg colour_signal; //Indicate if we want to draw, 1 or erase 0
- output display_enable; // Signal to indicate to the delay counter to start counting
+ output reg colour_signal,ld_x,ld_y; //Indicate if we want to draw, 1 or erase 0
+ output reg display_enable; // Signal to indicate to the delay counter to start countin
  output reg go; //Indicates to the draw box to draw a new box
- output reg frames; //Frames indicate when we have counted 15 frames
  output reg [1:0] direction;
 
  localparam START_STATE = 3'd0,
@@ -96,6 +103,7 @@ module control_move(clk, resetn,done, direction_in, delay_signal,colour_signal,f
 	    LOAD_Y_WAIT = 3'd7;
 
   //Declare the registers that we will use in our implementation
+        reg frames; //Frames indicate when we have counted 15 frames
         reg [1:0] direction_register;
 	reg [3:0] frame_counter;
 	reg [2:0] current_state, next_state;
@@ -105,9 +113,9 @@ module control_move(clk, resetn,done, direction_in, delay_signal,colour_signal,f
 	always@(*)
 	begin:StateTable
 	  case(current_state)
-	   START_STATE:next_state = (!resetn)?PAINT_BOX:START_STATE; //loop in START until we press reset
+	   START_STATE: next_state = (go)?PAINT_BOX:START_STATE; //loop in START until we press reset
 	   PAINT_BOX: next_state = done? COUNT_FRAMES: PAINT_BOX; //loop in PAINT until the draw_box module drew the box
-	   COUNT_FRAMES: next_state = frames? ERASE_BOX; COUNT_FRAMES; //loop in counting until we finish counting them
+	   COUNT_FRAMES: next_state = frames? ERASE_BOX: COUNT_FRAMES; //loop in counting until we finish counting them
 	   ERASE_BOX: next_state = done? LOAD_X:ERASE_BOX; //loop in erasing the box until the draw_box indicates otherwise
 	   LOAD_X: next_state = LOAD_X_WAIT;
 	   LOAD_X_WAIT: next_state = LOAD_Y;
@@ -117,14 +125,14 @@ module control_move(clk, resetn,done, direction_in, delay_signal,colour_signal,f
 	end
 
 
-    //Seconds Counter
-    always@(*)
-    begin:SecondCounter
-      if(!resetn)
-        seconds_counter <= 2'd0;
-      else begin
-         if(frames)
-	   seconds_counter <= seconds_counter + 2'd1;
+//    //Seconds Counter
+//    always@(*)
+//    begin:SecondCounter
+//      if(!resetn)
+//        seconds_counter <= 2'd0;
+//      else begin
+//         if(frames)
+//	   seconds_counter <= seconds_counter + 2'd1;
 
 
     //Direction Registers
@@ -143,11 +151,13 @@ module control_move(clk, resetn,done, direction_in, delay_signal,colour_signal,f
         frame_counter <= 4'd0; //Indicating we have not finished counting
 	frames <= 1'b0;
       if(frame_counter == 4'd15)
+	 begin 
          frame_counter <= 4'd0; // Indicate that we finished counting
          frames <= 1'b1;
+         end
       else begin
         if(delay_signal)
-	  frame_counter <= frame_counter + 4'd1;
+	  frame_counter <= frame_counter + 4'd1; //COunt up every time we get the signal from Delay Counter
 	  frames <= 1'b0;
 	end
     end
@@ -155,25 +165,44 @@ module control_move(clk, resetn,done, direction_in, delay_signal,colour_signal,f
     //Output Logic,signals for the datapath
     always@(*)
     begin:OutputLogic
+    ld_x = 1'b0;
+    ld_y = 1'b0;
     colour_signal = 1'b0;
     display_enable = 1'b0;
     go = 1'b0;
-    frames = 1'b0;
     direction = 2'b00;
     case(current_state)
-      START_STATE:begin
-        colour_signal = 1'b1; // We want to paint
-	go = 1'b1;
-
-
-
+      PAINT_BOX: begin
+        colour_signal = 1'b1; //Indicate we want to paint
+         go = 1'b1; // Go signal for the draw box
+	end
+      COUNT_FRAMES: begin
+        display_enable = 1'b1; //Indicate to keep counting up
+        end
+      ERASE_BOX: begin
+        colour_signal = 1'b0; //Painting black
+        go = 1'b1;
+        end
+      LOAD_X: ld_x = 1'b1;
+      LOAD_Y: ld_y = 1'b1;
+      endcase
+      end
+   // Next State Register Logic
+   always@(posedge clk)
+     begin:StateFFs
+       if(!resetn)
+         current_state <= START_STATE;
+       else
+          current_state <= next_state;
+     end
 endmodule
 
 /* Module that implements the datapath of the movement it also gives the colour to the VGA
  * and gives the (x,y) position for the draw_box module
  */
-module datapath_move(clk, resetn,direction,colour_signal,display_enable, colour_out, x_out, y_out);
-input clk, resetn,colour_signal,frames;
+module datapath_move(clk, resetn,direction,ld_x,ld_y,colour_signal,display_enable, colour_out, x_out, y_out,delay_signal);
+input clk, resetn,colour_signal;
+input ld_x, ld_y; //Indication to load the X and Y registers
 input display_enable; //Indicate that we have to count delay again
 input [1:0] direction;
 output reg delay_signal; //Tell the control unit that we counted 1/60th of a second
@@ -191,19 +220,19 @@ always@(posedge clk)
     y_reg <= 7'd21; //Initial position is (0,21)
   case(direction)
     2'b00:begin //We move to the right
-        if(frames)
+        if(ld_x)
 	 x_reg <= x_reg + 8'd1; //Add 1 to the right
 	 end
     2'b01:begin
-        if(frames)
+        if(ld_y)
          y_reg <= y_reg + 7'd1; //We are moving down add 1 to y
 	 end
     2'b10: begin
-        if(frames)
-	  x_reg <= x_reg - 7'd1; //Moving to the left
+        if(ld_x)
+	  x_reg <= x_reg - 8'd1; //Moving to the left
 	  end
     2'b11: begin
-        if(frames)
+        if(ld_y)
 	  y_reg <= y_reg - 7'd1; //Moving Up so we substract 1
 	end
    endcase
@@ -216,6 +245,7 @@ always@(posedge clk)
   begin:DelayCounter
   if(!resetn)
     delay_counter <= 20'd0;
+    delay_signal <= 1'b0;
   if(delay_counter == 20'd833333)
     delay_signal <= 1'b1; //Indicate the FSM that we count 1/60th of a second
     delay_counter <= 20'd0;
@@ -251,7 +281,6 @@ endmodule
 module draw_box(clk,resetn,go,x_in, y_in,x,y,plot,done);
 	input clk;
 	input resetn;
-	input restart;
 	input go;
 	input [7:0] x_in;
 	input [6:0] y_in;
@@ -280,6 +309,7 @@ module draw_box(clk,resetn,go,x_in, y_in,x,y,plot,done);
 	  .clk(clk),
 	  .resetn(resetn),
 	  .go(go),
+          .done(done),
 	  .load_x(ld_x),
 	  .load_y(ld_y),
 	  .load_r(ld_r),
@@ -308,7 +338,6 @@ module datapath_draw(clk,
 	input load_y;
 	input load_r;
 	input load_c;
-	input ld_alu_out;
 	input [7:0] x_in;
 	input [6:0] y_in;
 	output reg done;
@@ -395,7 +424,8 @@ module control_draw(input clk,
 		   LOAD_X_WAIT = 3'd1,
 		   LOAD_Y = 3'd2,
 		   LOAD_Y_WAIT = 3'd3,
-		   DISPLAY_RESULT = 3'd4;
+		   DISPLAY_RESULT = 3'd4,
+		   FINISH = 3'd5;
 
 	reg [2:0] current_state, next_state;
 
@@ -423,7 +453,6 @@ module control_draw(input clk,
            load_r = 1'b0;
 	    plot = 1'b0;
 	   load_c = 1'b0;
-	   load_alu_out = 1'b0;
 	   case(current_state)
 		LOAD_X: begin
 		  load_x = 1'b1; // send signal to allow X to be loaded
