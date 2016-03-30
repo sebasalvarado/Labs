@@ -1,5 +1,5 @@
 //Possible Errors: Line 198 maybe go is 1 when we press it try switching sides of cases
-module part2
+module pizzadelivery
 	(
 		CLOCK_50,						//	On Board 50 MHz
 		// Your inputs and outputs here
