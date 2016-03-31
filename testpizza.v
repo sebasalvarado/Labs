@@ -403,6 +403,11 @@ module datapath_draw(clk,
 		     if(load_x && load_y)
 			x_reg <= x_in;
 			y_reg <= y_in;
+		      if(!(load_x && load_y))
+			begin
+			x_reg <= x_reg;
+			y_reg <= y_reg;
+			end
 		end
 	end
 
