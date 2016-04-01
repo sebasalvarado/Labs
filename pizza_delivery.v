@@ -136,6 +136,7 @@ wire delay_signal_wire;
 			.y_out(y_value),
 			.delay_signal(delay_signal_wire)
        );
+		 
    draw_box drawing(
 	.clk(clk),
 	.resetn(resetn),
@@ -148,6 +149,8 @@ wire delay_signal_wire;
 	.done(done_wire)
 	);
 endmodule
+
+
 module control_move(clk, 
 		resetn,
 		done,go_in, 
@@ -294,7 +297,7 @@ always@(posedge clk)
   if(!resetn)
     begin
     x_reg <= 8'd0; // Starting position will be zero
-    y_reg <= 7'd21; //Initial position is (0,21)
+    y_reg <= 7'd60; //Initial position is (0,21)
     end
   else begin
   case(direction)
@@ -316,7 +319,7 @@ always@(posedge clk)
 			if(ld_x && ld_y)
 			begin
 			x_reg <= x_reg - 8'd1; //Moving to the left
-			y_reg <= y_reg;
+			y_reg <= y_reg ;
 			end
 			end
     2'b11: begin
@@ -357,12 +360,7 @@ begin:DelaySig
 		delay_signal <= 1'b0;
 	end
 end
-//Output Logic of the Module
-always@(posedge clk)
-  begin:OutputLogic
-		x_out = x_reg;
-		y_out = y_reg;
-  end
+
 
 // Colour Logic Always block
  always@(posedge clk)
@@ -370,12 +368,19 @@ always@(posedge clk)
      if(!resetn)
        colour_out <= 7'd0; //Load yellow when we reset the system
      if(&(colour_signal) == 1'b1)
-       colour_out <= 7'd60; //Load yellow when we indicate that we will paint
+       colour_out <= 7'd113; //Load yellow when we indicate that we will paint
      else begin
        if(&(colour_signal) != 1'b1)
          colour_out <= 7'b0; //Load black when we want to erase
 	end
    end
+	
+	//Output of the module
+	always@(*)
+	begin:Output
+		x_out = x_reg;
+		y_out = y_reg;
+	end
 endmodule
 
 module draw_box(clk,resetn,go,x_in, y_in,x,y,plot,done);
@@ -522,7 +527,7 @@ module datapath_draw(clk,
 	begin:ALU
 		if(!resetn) begin
 			x_alu = 7'b0;
-			y_alu = 6'b0;
+			y_alu = 6'd0;
 		end
 		else begin
 			// We add the two most significant bits to Y and the least to X
