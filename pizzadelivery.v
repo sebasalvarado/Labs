@@ -5,6 +5,8 @@ module pizza_delivery
 		// Your inputs and outputs here
         KEY,
         SW,
+	PS2_DAT,
+	PS2_CLK,
 		// The ports below are for the VGA output.  Do not change.
 		VGA_CLK,   						//	VGA Clock
 		VGA_HS,							//	VGA H_SYNC
@@ -19,6 +21,8 @@ module pizza_delivery
 	input			CLOCK_50;				//	50 MHz
 	input   [9:0]   SW;
 	input   [3:0]   KEY;
+	input PS2_DAT;
+	input PS2_CLK;
 	// Declare your inputs and outputs here
 
 	// Do not change the following outputs
@@ -43,7 +47,6 @@ module pizza_delivery
 	//Assign corresponding keys into the wires.
 	assign resetn = KEY[0];
 	assign  go = ~KEY[1];
-	assign direction = SW[1:0];
 	
 
 	// ALl the wires that we need to connect control and datapath
@@ -91,7 +94,7 @@ module pizza_delivery
 	wire [6:0] y_wire_random;
 	wire plot_random;
 	wire [2:0] colour_random;
-	random_painting(
+	randompainting  R0(
 	.clk(CLOCK_50),
 	.resetn(resetn),
 	.go(go),
@@ -100,6 +103,14 @@ module pizza_delivery
 	.colour(colour_random),
 	.done_out(go_draw),
 	.plot(plot_random)
+	);
+
+	keyboard_movement(
+	.clk(CLOCK_50),
+	.resetn(resetn),
+	.PS2_DAT(PS2_DAT),
+	.PS2_CLK(PS2_CLK),
+	.bits_out(direction)
 	);
 	
 	//Create a module that if done_out is low then take x,y,colour and plot from random
@@ -123,6 +134,127 @@ module pizza_delivery
 		
 endmodule
 
+
+
+
+module keyboard_movement(clk, resetn, PS2_DAT, PS2_CLK, bits_out);
+	// Clock Input (50Mhz)
+	input clk;
+	// Reset Button
+	input resetn;
+	// PS2 data and clock lines
+	input PS2_DAT;
+	input PS2_CLK;
+	//Output of the keyboard to be passed into the move module that controls the movement itself
+	output reg [1:0]bits_out;
+
+	wire read, scan_ready;
+	wire [7:0]scan_code;
+
+	keyboard kbd(
+		.keyboard_clk(PS2_CLK),
+		.keyboard_data(PS2_DAT),
+		.clock50(CLOCK_50),
+		.reset(resetn),
+		.read(read),
+		.scan_ready(scan_ready),
+		.scan_code(scan_code)
+	);
+
+	always@(posedge PS2_CLK)
+	begin:KEYS_KBD
+		case(scan_code)
+			8'b0001_1100: bits_out = 2'b10; // If the letter 'a' is preseed, move the character to the left
+			8'b0001_1011: bits_out = 2'b01; // If the letter 's' is pressed, move the character down
+			8'b0010_0011: bits_out = 2'b00; // If the letter 'd' is pressed, move the chracter to the right
+			8'b0001_1101: bits_out = 2'b11; // If the letter 'w' is pressed, move the characte up
+			default: bits_out = 2'b00;
+		endcase
+	end
+endmodule
+
+
+module keyboard(keyboard_clk, keyboard_data, clock50, reset, read, scan_ready, scan_code);
+input keyboard_clk;
+input keyboard_data;
+input clock50; // 50 Mhz system clock
+input reset;
+input read;
+output scan_ready;
+output [7:0] scan_code;
+reg ready_set;
+reg [7:0] scan_code;
+reg scan_ready;
+reg read_char;
+reg clock; // 25 Mhz internal clock
+
+reg [3:0] incnt;
+reg [8:0] shiftin;
+
+reg [7:0] filter;
+reg keyboard_clk_filtered;
+
+// scan_ready is set to 1 when scan_code is available.
+// user should set read to 1 and then to 0 to clear scan_ready
+
+always @ (posedge ready_set or posedge read)
+if (read == 1) scan_ready <= 0;
+else scan_ready <= 1;
+
+// divide-by-two 50MHz to 25MHz
+always @(posedge clock50)
+	clock <= ~clock;
+
+
+
+// This process filters the raw clock signal coming from the keyboard 
+// using an eight-bit shift register and two AND gates
+
+always @(posedge clock)
+begin
+   filter <= {keyboard_clk, filter[7:1]};
+   if (filter==8'b1111_1111) keyboard_clk_filtered <= 1;
+   else if (filter==8'b0000_0000) keyboard_clk_filtered <= 0;
+end
+
+
+// This process reads in serial data coming from the terminal
+
+always @(posedge keyboard_clk_filtered)
+begin
+   if (reset==1)
+   begin
+      incnt <= 4'b0000;
+      read_char <= 0;
+   end
+   else if (keyboard_data==0 && read_char==0)
+   begin
+	read_char <= 1;
+	ready_set <= 0;
+   end
+   else
+   begin
+	   // shift in next 8 data bits to assemble a scan code	
+	   if (read_char == 1)
+   		begin
+      		if (incnt < 9) 
+      		begin
+				incnt <= incnt + 1'b1;
+				shiftin = { keyboard_data, shiftin[8:1]};
+				ready_set <= 0;
+			end
+		else
+			begin
+				incnt <= 0;
+				scan_code <= shiftin[7:0];
+				read_char <= 0;
+				ready_set <= 1;
+			end
+		end
+	end
+end
+
+endmodule
 // Module that chooses a coordinate to the pizza to be delivered
 
 module move(clk, resetn, go,direction, x,y,plot,colour);
@@ -416,250 +548,7 @@ always@(posedge clk)
    end
 endmodule
 
-
-module draw_box(clk,resetn,go,x_in, y_in,x,y,plot,done);
-	input clk;
-	input resetn;
-	input go;
-	input [7:0] x_in;
-	input [6:0] y_in;
-	output [7:0] x;
-	output [6:0] y;
-	output plot;
-	output done;
-	//Declare the wires to connect control to datapath
-	wire ld_x,ld_y, ld_r, ld_c;
-	wire [1:0] clock_count;
-	//DOne wire between data and FSM
-	wire [3:0] counter_wire;
-
-	datapath_draw d0 (
-	  .clk(clk),
-	  .resetn(resetn),
-	  .load_x(ld_x),
-	  .load_y(ld_y),
-	  .load_r(ld_r),
-	  .load_c(ld_c),
-	  .x_in(x_in),
-	  .y_in(y_in),
-	  .clock_count(clock_count),
-	  .counter(counter_wire),
-	  .x(x),
-	  .y(y)
-	);
-
-	control_draw c0(
-	  .clk(clk),
-	  .resetn(resetn),
-	  .go(go),
-	  .counter(counter_wire),
-          .clock_count(clock_count),
-	  .done_out(done),
-	  .load_x(ld_x),
-	  .load_y(ld_y),
-	  .load_r(ld_r),
-	  .load_c(ld_c),
-	  .plot(plot)
-	);
-
-
-endmodule
-module datapath_draw(clk,
-	 	resetn,
-		load_x,
-		load_y,
-		load_r,
-		load_c,
-		x_in,
-		y_in,
-		clock_count,
-		counter,
-		x,
-		y);
-
-	// Declaring the inputs and outputs of the module
-	input clk;
-	input resetn;
-	input load_x;
-	input load_y;
-	input load_r;
-	input load_c;
-	input [7:0] x_in;
-	input [6:0] y_in;
-	output reg [3:0] counter;
-	output reg [1:0] clock_count;
-	output reg [7:0] x;
-	output reg [6:0] y;
-	// Declare the registers that we will have
-	reg [7:0] x_reg;
-	reg [6:0] y_reg;
-	// Define the two outputs of our ALU unit
-	reg [7:0] x_alu;
-	reg [6:0] y_alu;
-
-	//Input Logic for Load registers
-	always@(posedge clk)
-	begin: InputLogic
-		if(!resetn) begin
-			x_reg <=7'b0;
-			y_reg <=6'b0;
-		end
-		else begin
-		     if(load_x && load_y)
-			x_reg <= x_in;
-			y_reg <= y_in;
-		      if(!(load_x && load_y))
-			begin
-			x_reg <= x_reg;
-			y_reg <= y_reg;
-			end
-		end
-	end
-
-	//Output Result Register
-	always@(posedge clk)
-	begin:Output
-		if(!resetn) begin
-			x <= 7'b0;
-			y <= 6'b0;
-		end
-		else
-		   begin
-		   if(load_r)
-			x <=  x_alu;	// Indicate that we want to send the output
-			y <=  y_alu; // Indicate that we want to send the output
-	           end
-	end
-
-	//LOgic for the Counter register
-	always@(posedge clk)
-	begin:COUNTERLOGIC
-		if(counter == 4'd15)
-		    counter <= 4'd0;
-		if((!resetn))  //We will make a 5X5 square so count to 25
-		    begin
-		    counter <= 4'd0; // When we reach 15 we reset it again and keep counting
-		    end
-		else begin
-		    if(load_c)begin
-		    	counter <= counter + 1'b1; // add one on every clock edge
-			end
-		end
-	end
-	
-	always@(posedge clk)
-	begin:CLock
-		if(!resetn)
-			clock_count <= 2'd0;
-		else begin
-		     if(clock_count == 2'd2)
-			clock_count <= 2'd0;
-		     if(load_x)
-			clock_count <= clock_count + 2'd1;
-		 end
-	end
-	// The ALU Implementation
-	always@(*)
-	begin:ALU
-		if(!resetn) begin
-			x_alu = 7'b0;
-			y_alu = 6'b0;
-		end
-		else begin
-			// We add the two most significant bits to Y and the least to X
-			x_alu = x_reg + {6'd0, counter[1:0]};
-			y_alu = y_reg + {5'b0,counter[3:2]};
-		end
-	end
-endmodule
-
-module control_draw(input clk,
-		input resetn,
-		input go,
-		input [3:0] counter,
-		input [1:0] clock_count,
-		output reg done_out,
-		output reg load_x, load_y, load_r, load_c,
-		output reg plot);
-	// Declare the State table to refer to it later
-	localparam 
-		   START_STATE = 3'd0,
-		   LOAD_X_Y = 3'd1,
-		   LOAD_X_Y_WAIT = 3'd2,
-		   DISPLAY_RESULT = 3'd3,
-		   FINISH = 3'd4,
-		   WAIT = 3'd5;
-
-	reg [2:0] current_state, next_state;
-	reg [1:0] count_second;
-	always@(posedge clk)
-	begin:countSec
-		if(!resetn)
-			begin
-			count_second <= 2'b00;
-			end
-		if(&(count_second) == 1'b1)
-			count_second <= 2'b00;
-		else begin
-			count_second <= count_second + 2'b01;
-		      end
-	end
-	// Create the always block for the next state logic
-	always@(*)
-	begin: state_table
-	   case(current_state)
-		START_STATE: next_state = go? LOAD_X_Y:START_STATE;
-		LOAD_X_Y: next_state = (clock_count == 2'b10)? LOAD_X_Y_WAIT:LOAD_X_Y;	//loop in its state until go signal goes high again
-		LOAD_X_Y_WAIT:  next_state = DISPLAY_RESULT; //loop in its state until go signal goes high again
-		DISPLAY_RESULT: next_state = (&(counter) == 1'b1)? FINISH:DISPLAY_RESULT; //loop in its state until go signal goes high again
-		FINISH: next_state = (&(clock_count) == 1'b1)?WAIT:FINISH; //loop in FINISH until we have signal to leave it
-		WAIT: next_state = go? LOAD_X_Y: WAIT; //loop in WAIT until go signal
-	   default: next_state = START_STATE;
-	   endcase
-	end // THis was the state table
-
-	//Output logic, everything that the data path will receive as input goes here.
-	always@(*)
-	begin:OutLogic
-	// Set all of them to zero
-	   done_out = 1'b0;
-	   load_x = 1'b0;
-	   load_y = 1'b0;
-           load_r = 1'b0;
-	    plot = 1'b0;
-	   load_c = 1'b0;
-	   case(current_state)
-		LOAD_X_Y: begin
-		  load_x = 1'b1; // send signal to allow X to be loaded
-		  load_y = 1'b1;
-		  end
-		DISPLAY_RESULT: begin
-		  load_x = 1'b0; // When we will perform the computation
-		  load_y = 1'b0; // We dont want to load to overwrite values
-		  load_r = 1'b1;
-		  load_c = 1'b1;
-		  plot = 1'b1;
-		  end
-		FINISH: begin
-		 done_out =1'b1;
-		end
-		WAIT: begin
-		  done_out = 1'b0;
-		end
-	   endcase
-	end
-
-	//CUrrent state registers logic on positive clock edge
-	always@(posedge clk)
-	begin: StateFFs
-		if(!resetn)
-			current_state <= START_STATE;
-		else
-			current_state <= next_state;
-	end // THis is the state FFs that we will use
-endmodule
-
-module random_painting(clk, resetn, go, x, y, colour,done_out,plot);
+module randompainting(clk, resetn, go, x, y, colour,done_out,plot);
      input clk, resetn, go;
      output [7:0] x;
      output [6:0] y;
@@ -784,9 +673,6 @@ module control_random(clk, resetn, finish, go_in, done, ld_x, ld_y, add, go, don
 			ADD_ONE: begin
 				    add = 1'b1;
 				  end
-			ADD_ONE_WAIT: begin
-				   add = 1'b1;
-				  end
 			LOAD_X_Y: begin
 				   ld_x = 1'b1;
 				   ld_y = 1'b1;
@@ -871,9 +757,9 @@ module datapath_random(clk, resetn, ld_x,ld_y,add,x_in,y_in,x_out, y_out, finish
 	  if(!resetn)
 	      finish <= 1'b0;
           else begin
-	      if(box_counter === 4'd15)
+	      if(box_counter === 4'd14)
                   finish = 1'b1;
-	      if(box_counter !== 4'd15)
+	      if(box_counter !== 4'd14)
 		  finish = 1'b0;
 	  end
     end
@@ -1052,4 +938,245 @@ module flipflop(out, clk, resetn, d);
 		out = d;
 	end
 	
+endmodule
+
+
+module draw_box(clk,resetn,go,x_in, y_in,x,y,plot,done);
+	input clk;
+	input resetn;
+	input go;
+	input [7:0] x_in;
+	input [6:0] y_in;
+	output [7:0] x;
+	output [6:0] y;
+	output plot;
+	output done;
+	//Declare the wires to connect control to datapath
+	wire ld_x,ld_y, ld_r, ld_c;
+	wire [1:0] clock_count;
+	//DOne wire between data and FSM
+	wire [3:0] counter_wire;
+
+	datapath_draw d0 (
+	  .clk(clk),
+	  .resetn(resetn),
+	  .load_x(ld_x),
+	  .load_y(ld_y),
+	  .load_r(ld_r),
+	  .load_c(ld_c),
+	  .x_in(x_in),
+	  .y_in(y_in),
+	  .clock_count(clock_count),
+	  .counter(counter_wire),
+	  .x(x),
+	  .y(y)
+	);
+
+	control_draw c0(
+	  .clk(clk),
+	  .resetn(resetn),
+	  .go(go),
+	  .counter(counter_wire),
+          .clock_count(clock_count),
+	  .done_out(done),
+	  .load_x(ld_x),
+	  .load_y(ld_y),
+	  .load_r(ld_r),
+	  .load_c(ld_c),
+	  .plot(plot)
+	);
+
+
+endmodule
+module datapath_draw(clk,
+	 	resetn,
+		load_x,
+		load_y,
+		load_r,
+		load_c,
+		x_in,
+		y_in,
+		clock_count,
+		counter,
+		x,
+		y);
+
+	// Declaring the inputs and outputs of the module
+	input clk;
+	input resetn;
+	input load_x;
+	input load_y;
+	input load_r;
+	input load_c;
+	input [7:0] x_in;
+	input [6:0] y_in;
+	output reg [3:0] counter;
+	output reg [1:0] clock_count;
+	output reg [7:0] x;
+	output reg [6:0] y;
+	// Declare the registers that we will have
+	reg [7:0] x_reg;
+	reg [6:0] y_reg;
+	// Define the two outputs of our ALU unit
+	reg [7:0] x_alu;
+	reg [6:0] y_alu;
+
+	//Input Logic for Load registers
+	always@(posedge clk)
+	begin: InputLogic
+		if(!resetn) begin
+			x_reg <=7'b0;
+			y_reg <=6'b0;
+		end
+		else begin
+		     if(load_x && load_y)
+			x_reg <= x_in;
+			y_reg <= y_in;
+		     if(!(load_x && load_y))
+			x_reg <= x_reg;
+			y_reg <= y_reg;
+		end
+	end
+
+	//Output Result Register
+	always@(posedge clk)
+	begin:Output
+		if(!resetn) begin
+			x <= 7'b0;
+			y <= 6'b0;
+		end
+		else
+		   begin
+		   if(load_r)
+			x <=  x_alu;	// Indicate that we want to send the output
+			y <=  y_alu; // Indicate that we want to send the output
+	           end
+	end
+
+	//LOgic for the Counter register
+	always@(posedge clk)
+	begin:COUNTERLOGIC
+		if(counter == 4'd15)
+		    counter <= 4'd0;
+		if((!resetn))  //We will make a 5X5 square so count to 25
+		    begin
+		    counter <= 4'd0; // When we reach 15 we reset it again and keep counting
+		    end
+		else begin
+		    if(load_c)begin
+		    	counter <= counter + 1'b1; // add one on every clock edge
+			end
+		end
+	end
+	
+	always@(posedge clk)
+	begin:CLock
+		if(!resetn)
+			clock_count <= 2'd0;
+		else begin
+		     if(clock_count == 2'd2)
+			clock_count <= 2'd0;
+		     if(load_x)
+			clock_count <= clock_count + 2'd1;
+		 end
+	end
+	// The ALU Implementation
+	always@(*)
+	begin:ALU
+		if(!resetn) begin
+			x_alu = 7'b0;
+			y_alu = 6'b0;
+		end
+		else begin
+			// We add the two most significant bits to Y and the least to X
+			x_alu = x_reg + {6'd0, counter[1:0]};
+			y_alu = y_reg + {5'b0,counter[3:2]};
+		end
+	end
+endmodule
+
+module control_draw(input clk,
+		input resetn,
+		input go,
+		input [3:0] counter,
+		input [1:0] clock_count,
+		output reg done_out,
+		output reg load_x, load_y, load_r, load_c,
+		output reg plot);
+	// Declare the State table to refer to it later
+	localparam 
+		   START_STATE = 3'd0,
+		   LOAD_X_Y = 3'd1,
+		   LOAD_X_Y_WAIT = 3'd2,
+		   DISPLAY_RESULT = 3'd3,
+		   FINISH = 3'd4,
+		   WAIT = 3'd5;
+
+	reg [2:0] current_state, next_state;
+	reg [1:0] count_second;
+	always@(posedge clk)
+	begin:countSec
+		if(!resetn)
+			begin
+			count_second <= 2'b00;
+			end
+		if(&(count_second) == 1'b1)
+			count_second <= 2'b00;
+		else begin
+			count_second <= count_second + 2'b01;
+		      end
+	end
+	// Create the always block for the next state logic
+	always@(*)
+	begin: state_table
+	   case(current_state)
+		START_STATE: next_state = go? LOAD_X_Y:START_STATE;
+		LOAD_X_Y: next_state = (clock_count == 2'b10)? LOAD_X_Y_WAIT:LOAD_X_Y;	//loop in its state until go signal goes high again
+		LOAD_X_Y_WAIT:  next_state = DISPLAY_RESULT; //loop in its state until go signal goes high again
+		DISPLAY_RESULT: next_state = (&(counter) == 1'b1)? FINISH:DISPLAY_RESULT; //loop in its state until go signal goes high again
+		FINISH: next_state = (&(clock_count) == 1'b1)?WAIT:FINISH; //loop in FINISH until we have signal to leave it
+		WAIT: next_state = go? LOAD_X_Y: WAIT; //loop in WAIT until go signal
+	   default: next_state = START_STATE;
+	   endcase
+	end // THis was the state table
+
+	//Output logic, everything that the data path will receive as input goes here.
+	always@(*)
+	begin:OutLogic
+	// Set all of them to zero
+	   done_out = 1'b0;
+	   load_x = 1'b0;
+	   load_y = 1'b0;
+           load_r = 1'b0;
+	    plot = 1'b0;
+	   load_c = 1'b0;
+	   case(current_state)
+		LOAD_X_Y: begin
+		  load_x = 1'b1; // send signal to allow X to be loaded
+		  load_y = 1'b1;
+		  end
+		DISPLAY_RESULT: begin
+		  load_x = 1'b0; // When we will perform the computation
+		  load_y = 1'b0; // We dont want to load to overwrite values
+		  load_r = 1'b1;
+		  load_c = 1'b1;
+		  plot = 1'b1;
+		  end
+		FINISH: begin
+		 done_out =1'b1;
+		end
+		WAIT: begin
+		  done_out = 1'b0;
+		end
+	   endcase
+	end
+
+	//CUrrent state registers logic on positive clock edge
+	always@(posedge clk)
+	begin: StateFFs
+		if(!resetn)
+			current_state <= START_STATE;
+		else
+			current_state <= next_state;
+	end // THis is the state FFs that we will use
 endmodule
