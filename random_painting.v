@@ -1,4 +1,4 @@
-module random_painting(clk, resetn, go, x, y, plot, colour,done_out,plot);
+module randompainting(clk, resetn, go, x, y, colour,done_out,plot);
      input clk, resetn, go;
      output [7:0] x;
      output [6:0] y;
@@ -98,7 +98,7 @@ module control_random(clk, resetn, finish, go_in, done, ld_x, ld_y, add, go, don
 		ADD_ONE: next_state = ADD_ONE_WAIT; //Send a signal to count up on the next clock edge
 		ADD_ONE_WAIT: next_state = LOAD_X_Y; //THis means we will count up now
 		LOAD_X_Y: next_state = LOAD_X_Y_WAIT;
-		LOAD_X_Y_WAIT: next_state = done_out? FINISH:PAINT_BOX; //When we finished painting x number of boxes stay in finish
+		LOAD_X_Y_WAIT: next_state = finish? FINISH:PAINT_BOX; //When we finished painting x number of boxes stay in finish
 		FINISH: next_state = go? START_STATE: FINISH; //When go is high again we can paint more random boxes
 	endcase	
 	end
@@ -123,13 +123,13 @@ module control_random(clk, resetn, finish, go_in, done, ld_x, ld_y, add, go, don
 			ADD_ONE: begin
 				    add = 1'b1;
 				  end
-			ADD_ONE_WAIT: begin
-				   add = 1'b1;
-				  end
 			LOAD_X_Y: begin
 				   ld_x = 1'b1;
 				   ld_y = 1'b1;
 				   end
+			FINISH: begin	
+				done_out = 1'b1;
+				end
 		endcase
 	end
 
@@ -207,14 +207,189 @@ module datapath_random(clk, resetn, ld_x,ld_y,add,x_in,y_in,x_out, y_out, finish
 	  if(!resetn)
 	      finish <= 1'b0;
           else begin
-	      if(box_counter === 4'd15)
+	      if(box_counter === 4'd14)
                   finish = 1'b1;
-	      if(box_counter !== 4'd15)
+	      if(box_counter !== 4'd14)
 		  finish = 1'b0;
 	  end
     end
          
 endmodule
+module house_delivery(clk, resetn, x_out, y_out);
+	input clk;
+	input resetn;
+	// The coordinates of the house of the pizza to be delivered
+	output reg [7:0]x_out;
+	output reg [6:0]y_out;
+
+	// The number that is randomly generated to be map to the coordinates of the house.
+	wire [3:0]house_num;
+
+	// Instanciation of the module that crates a 4 bit random number
+	random_number RNG(
+		.clk(clk),
+		.resetn(resetn),
+		.data_out(house_num)
+		);
+
+// Cases, that selects the coordinates of the house based on the random number
+always @(*)
+	begin: num_RGB	
+	case(house_num)
+		4'b0000: begin
+			x_out = 8'd4;                       // if the number is 0000, the coordanate is x =4, y =4
+			y_out = 7'd4;
+			end  	    
+		4'b0001: begin
+			x_out = 8'd4; 
+			y_out = 7'd36;       		    // if the number is 0001, the coordanate is x =4, y =36
+			end
+		4'b0010: begin
+			x_out = 8'd4; 
+			y_out = 7'd68;       		    // if the number is 0010, the coordanate is x =4, y =68
+			end
+		4'b0011: begin
+			x_out = 8'd4; 
+			y_out = 7'd100;        		    // if the number is 0011, the coordanate is x =4, y =100
+			end
+		4'b0100: begin 
+			x_out = 8'd36; 
+			y_out = 7'd4;       		    // if the number is 0100, the coordanate is x =36, y =4
+			end
+		4'b0101: begin
+			x_out = 8'd52; 
+			y_out = 7'd36;      		    // if the number is 0101, the coordanate is x =52, y =36
+			end
+		4'b0110: begin
+			x_out = 8'd52; 
+			y_out = 7'd68;            	    // if the number is 0110, the coordanate is x =52, y =68
+			end
+		4'b0111: begin
+			x_out = 8'd52; 
+			y_out = 7'd100;     		    // if the number is 0111, the coordanate is x =52, y =100
+			end
+		4'b1000: begin
+			x_out = 8'd68; 
+			y_out = 7'd4;       		    // if the number is 1000, the coordanate is x =68, y =4
+			end
+		4'b1001: begin
+			x_out = 8'd100; 
+			y_out = 7'd36;     		    // if the number is 1001, the coordanate is x =100, y =36
+			end
+		4'b1010: begin
+			x_out = 8'd100; 
+			y_out = 7'd68;     		    // if the number is 1010, the coordanate is x =100, y =68
+			end
+		4'b1011: begin
+			x_out = 8'd100; 
+			y_out = 7'd100;    		    // if the number is 1011, the coordanate is x =100, y =100
+			end
+		4'b1100: begin
+			x_out = 8'd100; 
+			y_out = 7'd4;     		    // if the number is 1100, the coordanate is x =100, y =4
+			end
+		4'b1101: begin
+			x_out = 8'd148; 
+			y_out = 7'd36;     		    // if the number is 1101, the coordanate is x =148, y =36
+			end
+		4'b1110: begin
+			x_out = 8'd148; 
+			y_out = 7'd68;     		    // if the number is 1110, the coordanate is x =148, y =68
+			end
+		4'b1111: begin
+			x_out = 8'd148; 
+			y_out = 7'd100;    		    // if the number is 1111, the coordanate is x =148, y =100
+			end
+	endcase
+	end
+endmodule
+
+// Module that generated a random 4 bit number.
+module random_number(clk, resetn, data_out);
+	input clk;
+	input resetn;
+	output [3:0]data_out;
+	
+	wire [3:0]one;
+	assign one = 4'd1;
+	
+	wire first,second,third,fourth;
+	
+	assign data_out = {fourth,third,second,first};
+	random_bit r1(
+		.out_bit(first),
+		.clk(clk),
+		.resetn(resetn),
+		.seed(one),
+		.load(1'b1)
+	);
+	random_bit r2(
+		.out_bit(second),
+		.clk(clk),
+		.resetn(resetn),
+		.seed(one),
+		.load(1'b1)
+	);
+	random_bit r3(
+		.out_bit(third),
+		.clk(clk),
+		.resetn(resetn),
+		.seed(one),
+		.load(1'b1)
+	);
+	random_bit r4(		
+		.out_bit(fourth),
+		.clk(clk),
+		.resetn(resetn),
+		.seed(one),
+		.load(1'b1));
+endmodule 
+
+module random_bit(out_bit, clk, resetn, seed, load);
+	output out_bit;
+	input clk, resetn;
+	input [3:0] seed;
+	input load;
+	
+	wire [3:0] state_out;
+	wire [3:0] state_in;
+	
+	flipflop F[3:0](
+	state_out,clk,resetn,state_in
+	);
+	
+	mux M1[3:0](state_in,load,seed,{state_out[2],state_out[1],state_out[0],nextbit});
+	
+	xor G1 (nextbit, state_out[2],state_out[3]);
+	assign q = nextbit;
+endmodule
+
+module mux(q, control, a,b);
+ output q;
+ reg q;
+ input control,a ,b;
+ 
+ wire notcontrol;
+ 
+ always@(control or notcontrol or a or b)
+	q = (control &a) | (notcontrol&b);
+	not(notcontrol,control);
+endmodule
+
+module flipflop(out, clk, resetn, d);
+ input clk,resetn,d;
+ output reg out;
+ 
+ always@(posedge clk or negedge resetn)
+ begin:Logic
+	if(!resetn)
+		out = 0;
+	else
+		out = d;
+	end
+	
+endmodule
+
 
 module draw_box(clk,resetn,go,x_in, y_in,x,y,plot,done);
 	input clk;
@@ -308,10 +483,8 @@ module datapath_draw(clk,
 			x_reg <= x_in;
 			y_reg <= y_in;
 		     if(!(load_x && load_y))
-			begin
 			x_reg <= x_reg;
 			y_reg <= y_reg;
-			end
 		end
 	end
 
