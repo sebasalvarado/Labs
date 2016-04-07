@@ -2,7 +2,7 @@
  *
  */
 module ram_read(clk, resetn, x_in, y_in, go, data_in, address, data_out, writeEn, x_out, y_out);
-	input, clk, resetn;
+	input clk, resetn;
 	input [7:0] x_in; //The x coordinate given by the datapath
 	input [6:0] y_in; //THe y coordinate given by the datapath
 	input go;
@@ -15,15 +15,57 @@ module ram_read(clk, resetn, x_in, y_in, go, data_in, address, data_out, writeEn
 	output [7:0] x_out; //X coordinate for the delete box that we will need if successful found
 	output [7:0] y_out; // Y coordinate for the delete box
 
-	//Declare the wires that we will need in this module
+	//Declare the wires that we will need in this modu
+	//Wires from the Datapath to the control	
+	wire finish_wire;
+	//Wires from teh FSM to the datapath
+	wire x_comp_wire, y_comp_wire, reset_address_wire, ld_x_y_wire, add_x_addr_w, add_y_addr_w, ld_ram_w, addr_choose_w, final_comp_w;
+	
 
+	ram_read_control CONTROL(
+		.clk(clk),
+		.resetn(resetn),
+		.go(go),
+		.finish(finish_wire),
+		.x_comp(x_comp_wire),
+		.y_comp(y_comp_wire),
+		.reset_address(reset_address_wire),
+		.ld_x_y(ld_x_y_wire),
+		.add_x_addr(add_x_addr_w),
+		.add_y_addr(add_y_addr_w),
+		.ld_ram(ld_ram_w),
+		.addr_choose(addr_choose_w),
+		.final_comp(final_comp_w)
+	);
+	ram_read_datapath DATA(
+		.clk(clk),
+		.resetn(resetn),
+		.x_in(x_in),
+		.y_in(y_in),
+		.data_in(data_in),
+		.x_comp(x_comp_wire),
+		.y_comp(y_comp_wire),
+		.reset_address(reset_address_wire),
+		.ld_x_y(ld_x_y_wire),
+		.add_x_addr(add_x_addr_w),
+		.add_y_addr(add_y_addr_w),
+		.ld_ram(ld_ram_w),
+		.addr_choose(addr_choose_w),
+		.final_comp(final_comp_w),
+		.finish(finish_wire),
+		.address(address),
+		.data_out(data_out),
+		.writeEn(writeEn),
+		.x_out(x_out),
+		.y_out(y_out)
+	);
 	
 endmodule
 
 /* Decoding of Signals: ld_ram is zero when we choose the output of Ram to in the RAM_X 1 is otherwise
  * addr_choose is low when we will choose the address stored in addr_x for the input of the RAM
  */
-module ram_read_controlunit(clk, resetn,go,finish,x_comp, y_comp,reset_address, ld_x_y, add_x_addr, add_y_addr, ld_ram, addr_choose, final_comp);
+module ram_read_control(clk, resetn,go,finish,x_comp, y_comp,reset_address, ld_x_y, add_x_addr, add_y_addr, ld_ram, addr_choose, final_comp);
 	input clk, resetn,go;
 	input finish; //Will be high when the datapath says that we have already got all the address in the RAM
 	output reg x_comp, y_comp, reset_address, ld_x_y, add_x_addr, add_y_addr, ld_ram, addr_choose, final_comp; 
@@ -59,7 +101,7 @@ module ram_read_controlunit(clk, resetn,go,finish,x_comp, y_comp,reset_address, 
 		READ_SIGNAL_Y: next_state = LOAD_RAM_Y; //Indicate that we will load what the ram gives us
 		LOAD_RAM_Y: next_state = COMPARE_Y; // When we already loaded we have to compare the Y to the desired interval
 		COMPARE_Y: next_state = ADD_ADDR_Y;
-		ADD_ADDR_Y: next_state = FINAL_COMAPRISON;
+		ADD_ADDR_Y: next_state = FINAL_COMPARISON;
 		FINAL_COMPARISON: next_state = (finish)? RESET_ADDRESS: READ_SIGNAL_X; //If we havent finished reading the RAM go back to read X
 		RESET_ADDRESS: next_state = FINISH;
 		FINISH: next_state = (go)? LOAD_X_Y: FINISH; //loop until go is high again
@@ -149,7 +191,7 @@ module ram_read_datapath(clk, resetn, x_in, y_in,data_in,  x_comp, y_comp, reset
 	reg [6:0] y;
 	reg [4:0] addr_x, addr_y;
 	reg [7:0] RAM_x, RAM_y;
-	reg result_x, result_y //THese two registers contain the comparisons result of x and y 
+	reg result_x, result_y; //THese two registers contain the comparisons result of x and y 
 	reg final_result;
 
 	//Input Logic for the registers in our datapath 
@@ -158,6 +200,7 @@ module ram_read_datapath(clk, resetn, x_in, y_in,data_in,  x_comp, y_comp, reset
 		if(!resetn) begin
 			x <= 8'b0;
 			y <= 7'd0;
+			end
 		else begin
 			if(ld_x_y) begin
 				x <= x_in; 
@@ -171,6 +214,7 @@ module ram_read_datapath(clk, resetn, x_in, y_in,data_in,  x_comp, y_comp, reset
 	begin:AddrX
 		if(!resetn) begin
 			addr_x <= 5'd0;
+			end
 		else begin
 			if(addr_x === 5'd30) begin
 				//Reset the counter and send the signal
@@ -226,7 +270,7 @@ module ram_read_datapath(clk, resetn, x_in, y_in,data_in,  x_comp, y_comp, reset
 		end
 		else begin
 			if(x_comp)begin
-				if((x <= RAM_x - 8'd16) || (x >= RAM_x + 8'd16)) begin
+				if((x === RAM_x)) begin
 					//Put the Result ignal high
 					result_x <= 1'b1;
 				end
@@ -258,8 +302,9 @@ module ram_read_datapath(clk, resetn, x_in, y_in,data_in,  x_comp, y_comp, reset
 	//Input logic for the final comparison between x and y
 	always@(posedge clk)
 	begin:FinalCOmp
-		if(!resetn)
+		if(!resetn)begin
 			final_result <= 1'b0;
+			end
 		else begin
 			final_result <= (result_x && result_y);
 		end
@@ -268,10 +313,11 @@ module ram_read_datapath(clk, resetn, x_in, y_in,data_in,  x_comp, y_comp, reset
 	//Output Logic that we will use
 	always@(*)
 	begin:Output
-		data = 8'd0;
-  		writeEn = final_result
-		address = (addr_choose)? addr_x: addr_y;
+		data_out = 8'd0;
+  		writeEn = final_result;
+		finish = (addr_x === 5'd31)? 1'b1: 1'b0;
+		address = addr_choose? addr_x: addr_y;
 		x_out = x; 
-		y_out y;
+		y_out = y;
 	end										
 endmodule
